@@ -1,13 +1,28 @@
 package borrowingapp;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 public class App {
-
+	// AWS RDS database related variable details 
+	private static final String JDBC_URL = "jdbc:mysql://borrowing-tracker-db.cba8m8wwshs9.ap-southeast-2.rds.amazonaws.com/borrowing-tracker-db";
+	private static final String DB_USER = "admin";
+	private static final String DB_PASSWORD = "Bond20100";
+	
+	private static List<Transaction> transaction = new ArrayList<>();
+	private static double balance = 0.0;
+	
 	public static void main(String[] args) {
+		// step 1: load transactions from the database when the program starts
+		loadTransactionFromDatabase();
+		
 		Scanner scanner = new Scanner(System.in);
-		// declare variables
-		double balance = 0.0;
 		
 		boolean running = true;
 		while(running) {
@@ -21,7 +36,7 @@ public class App {
 			try {
 				choice = scanner.nextInt();
 			} catch(java.util.InputMismatchException e) {
-				System.out.println("Invalid input. Please enter a number");
+				System.err.println("Invalid input. Please enter a number");
 				scanner.next(); // clear the invalid input from the scanner
 				continue;
 			}
@@ -35,10 +50,17 @@ public class App {
 					System.out.print("Enter a description: ");
 					String description = scanner.nextLine();
 					
-					// Update the balance and add the transaction to a list
-					balance += amount;
+					// step 2: create a new transaction and add it to the list
+					Transaction newTransaction = new Transaction(amount, description);
 					
-					System.out.println("Transaction recorded. Balance updated.");
+					// step 3: save the new transaction to the database
+					if(saveTransactionToDatabase(newTransaction)) {
+						transaction.add(newTransaction);
+						balance += amount;
+						System.out.println("Transaction recorded. Balance updated.");
+					} else {
+						System.out.println("Failed to save transaction.");
+					}
 					break;
 				case 2:
 					System.out.printf("Current balance: $%.2f%n", balance);
@@ -61,4 +83,36 @@ public class App {
 		scanner.close();
 	}
 
+	private static void loadTransactionFromDatabase() {
+		
+		try(Connection conn = DriverManager.getConnection(JDBC_URL, DB_USER, DB_PASSWORD)){
+			String sql = "SELECT amount, description FROM transactions";
+			PreparedStatement stmt = conn.prepareStatement(sql);
+			ResultSet rs = stmt.executeQuery();
+			
+			while(rs.next()) {
+				double amount = rs.getDouble("amount");
+				String description = rs.getString("description");
+				transaction.add(new Transaction(amount, description));
+				balance += amount;
+				}
+				System.out.println("Loaded " + transaction.size() + " past transactions.");
+			} catch(SQLException e) {
+			System.err.println("Database connection failed: " + e.getMessage());
+		}
+	}
+	
+	private static boolean saveTransactionToDatabase(Transaction transaction) {
+		try(Connection conn = DriverManager.getConnection(JDBC_URL, DB_USER, DB_PASSWORD)){
+			String sql = "INSERT INTO transactions (amount, description) VALUES (?, ?)";
+			PreparedStatement stmt = conn.prepareStatement(sql);
+			stmt.setDouble(1, transaction.getAmount());
+			stmt.setString(2, transaction.getDescription());
+			stmt.executeUpdate();
+			return true;
+		}catch(SQLException e) {
+			System.err.println("Failed to save transaction to database: " + e.getMessage());
+			return false;
+		}
+	}
 }
