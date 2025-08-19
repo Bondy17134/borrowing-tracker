@@ -29,7 +29,8 @@ public class App {
 			System.out.println("--- Borrowing Tracker ---");
 			System.out.println("1. Add a transaction");
 			System.out.println("2. Show current balance");
-			System.out.println("3. Exit");
+			System.out.println("3. Display all transactions");
+			System.out.println("4. Exit");
 			
 			// read the user's choice
 			int choice = -1;
@@ -73,6 +74,9 @@ public class App {
 					}
 					break;
 				case 3:
+					displayAllTransactions();
+					break;
+				case 4:
 					running = false;
 					System.out.println("Exiting application");
 					break;
@@ -86,7 +90,7 @@ public class App {
 	private static void loadTransactionFromDatabase() {
 		
 		try(Connection conn = DriverManager.getConnection(JDBC_URL, DB_USER, DB_PASSWORD)){
-			String sql = "SELECT amount, description FROM transactions";
+			String sql = "SELECT id, amount, description, timestamp FROM transactions";
 			PreparedStatement stmt = conn.prepareStatement(sql);
 			ResultSet rs = stmt.executeQuery();
 			
@@ -113,6 +117,17 @@ public class App {
 		}catch(SQLException e) {
 			System.err.println("Failed to save transaction to database: " + e.getMessage());
 			return false;
+		}
+	}
+	
+	private static void displayAllTransactions() {
+		if(transaction.isEmpty()) {
+			System.out.println("No transaction recorded yet.");
+			return;
+		}
+		System.out.println("\n--- All Transactions ---");
+		for(Transaction t: transaction) {
+			System.out.println(t); // uses the overriden toString() method in Transaction class
 		}
 	}
 }
