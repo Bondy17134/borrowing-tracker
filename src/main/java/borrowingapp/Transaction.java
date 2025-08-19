@@ -3,8 +3,6 @@ package borrowingapp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-import javax.swing.text.DateFormatter;
-
 public class Transaction {
 	private int id; // added id field following AWS RDS
 	private double amount;

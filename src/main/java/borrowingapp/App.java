@@ -1,5 +1,11 @@
 package borrowingapp;
 
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.control.Label;
+import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -11,132 +17,33 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
-public class App {
-	// AWS RDS database related variable details 
-	private static final String JDBC_URL = "jdbc:mysql://borrowing-tracker-db.cba8m8wwshs9.ap-southeast-2.rds.amazonaws.com/borrowing-tracker-db";
-	private static final String DB_USER = "admin";
-	private static final String DB_PASSWORD = "Bond20100";
+public class App extends Application{
 	
-	private static List<Transaction> transaction = new ArrayList<>();
-	private static double balance = 0.0;
-	
-	public static void main(String[] args) {
-		// step 1: load transactions from the database when the program starts
-		loadTransactionFromDatabase();
+	public void start(Stage primaryStage) {
+		// creare a lable control to desplay text
+		Label helloLabel = new Label("Hello, Borrowing Tracker GUI!");
 		
-		Scanner scanner = new Scanner(System.in);
+		// create a StackPane layout. It places nodes in a back-to-front stack
+		StackPane root = new StackPane();
+		root.getChildren().add(helloLabel);
 		
-		boolean running = true;
-		while(running) {
-			System.out.println("--- Borrowing Tracker ---");
-			System.out.println("1. Add a transaction");
-			System.out.println("2. Show current balance");
-			System.out.println("3. Display all transactions");
-			System.out.println("4. Exit");
-			
-			// read the user's choice
-			int choice = -1;
-			try {
-				choice = scanner.nextInt();
-			} catch(java.util.InputMismatchException e) {
-				System.err.println("Invalid input. Please enter a number");
-				scanner.next(); // clear the invalid input from the scanner
-				continue;
-			}
-			
-			switch(choice) {
-				case 1: 
-					System.out.print("Enter amount (+ for you, - for sister): ");
-					double amount = scanner.nextDouble();
-					scanner.nextLine(); // consume the rest of the line
-					
-					System.out.print("Enter a description: ");
-					String description = scanner.nextLine();
-					
-					// step 2: create a new transaction and add it to the list
-					Transaction newTransaction = new Transaction(amount, description);
-					
-					// step 3: save the new transaction to the database
-					if(saveTransactionToDatabase(newTransaction)) {
-						transaction.add(newTransaction);
-						balance += amount;
-						System.out.println("Transaction recorded. Balance updated.");
-					} else {
-						System.out.println("Failed to save transaction.");
-					}
-					break;
-				case 2:
-					System.out.printf("Current balance: $%.2f%n", balance);
-					if(balance > 0) {
-						System.out.println("Your sister owes you.");
-					} else if(balance < 0) {
-						System.out.println("You owe your sister.");
-					} else {
-						System.out.println("You are all square.");
-					}
-					break;
-				case 3:
-					displayAllTransactions();
-					break;
-				case 4:
-					running = false;
-					System.out.println("Exiting application");
-					break;
-				default:
-					System.out.println("Invalid choice. Please enter 1, 2, or 3.");
-			}
-		}
-		scanner.close();
-	}
-
-	private static void loadTransactionFromDatabase() {
-		transaction.clear(); // clear current list before loading
-		balance = 0.0; // reset balance before recalculating from database
-		try(Connection conn = DriverManager.getConnection(JDBC_URL, DB_USER, DB_PASSWORD)){
-			String sql = "SELECT id, amount, description, timestamp FROM transactions";
-			PreparedStatement stmt = conn.prepareStatement(sql);
-			ResultSet rs = stmt.executeQuery();
-			
-			while(rs.next()) {
-				int id = rs.getInt("id");
-				double amount = rs.getDouble("amount");
-				String description = rs.getString("description");
-				Timestamp dbTimestamp = rs.getTimestamp("timestamp");
-				// ternary operator (if-else shorthand)
-				// condition ? value_if_true : value_if_false
-				LocalDateTime timestamp = dbTimestamp != null ? dbTimestamp.toLocalDateTime() : null;
-				
-				transaction.add(new Transaction(id, amount, description, timestamp));
-				balance += amount;
-				}
-				System.out.println("Loaded " + transaction.size() + " past transactions.");
-			} catch(SQLException e) {
-			System.err.println("Database connection failed during loading: " + e.getMessage());
-		}
+		// create a scene. a scene holds all the content of a scene graph
+		// the scene graph is the hierachy of nodes that make up a JavaFX application's UI
+		// parameters: root node, width, height
+		Scene scene = new Scene(root, 400, 200);
+		
+		// set the title of the primary window (Stage)
+		primaryStage.setScene(scene);
+		
+		// show the stage (window) to the user
+		primaryStage.show();
 	}
 	
-	private static boolean saveTransactionToDatabase(Transaction transaction) {
-		try(Connection conn = DriverManager.getConnection(JDBC_URL, DB_USER, DB_PASSWORD)){
-			String sql = "INSERT INTO transactions (amount, description) VALUES (?, ?)";
-			PreparedStatement stmt = conn.prepareStatement(sql);
-			stmt.setDouble(1, transaction.getAmount());
-			stmt.setString(2, transaction.getDescription());
-			stmt.executeUpdate();
-			return true;
-		}catch(SQLException e) {
-			System.err.println("Failed to save transaction to database: " + e.getMessage());
-			return false;
-		}
-	}
+    public static void main(String[] args) {
+        // This launches the JavaFX application.
+        // It calls the start() method internally.
+        launch(args);
+    }
 	
-	private static void displayAllTransactions() {
-		if(transaction.isEmpty()) {
-			System.out.println("No transaction recorded yet.");
-			return;
-		}
-		System.out.println("\n--- All Transactions ---");
-		for(Transaction t: transaction) {
-			System.out.println(t); // uses the overriden toString() method in Transaction class
-		}
-	}
+	
 }
