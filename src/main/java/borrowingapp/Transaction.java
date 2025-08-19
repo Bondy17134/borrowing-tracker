@@ -1,6 +1,9 @@
 package borrowingapp;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+import javax.swing.text.DateFormatter;
 
 public class Transaction {
 	private int id; // added id field following AWS RDS
@@ -44,8 +47,11 @@ public class Transaction {
 	
 	@Override
 	public String toString() {
+		// define a formatter or both date and time
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+		String formattedTimestamp = (timestamp != null) ? timestamp.format(formatter) : "N/A";
 		// format the amount for display
 		String formattedAmount = String.format("%.2f", amount);
-		return id + "," + formattedAmount + "," + description + "," + timestamp;
+		return id + "," + formattedAmount + "," + description + "," + formattedTimestamp;
 	}
 }

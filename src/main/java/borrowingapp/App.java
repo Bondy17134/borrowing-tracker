@@ -5,6 +5,8 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -88,21 +90,28 @@ public class App {
 	}
 
 	private static void loadTransactionFromDatabase() {
-		
+		transaction.clear(); // clear current list before loading
+		balance = 0.0; // reset balance before recalculating from database
 		try(Connection conn = DriverManager.getConnection(JDBC_URL, DB_USER, DB_PASSWORD)){
 			String sql = "SELECT id, amount, description, timestamp FROM transactions";
 			PreparedStatement stmt = conn.prepareStatement(sql);
 			ResultSet rs = stmt.executeQuery();
 			
 			while(rs.next()) {
+				int id = rs.getInt("id");
 				double amount = rs.getDouble("amount");
 				String description = rs.getString("description");
-				transaction.add(new Transaction(amount, description));
+				Timestamp dbTimestamp = rs.getTimestamp("timestamp");
+				// ternary operator (if-else shorthand)
+				// condition ? value_if_true : value_if_false
+				LocalDateTime timestamp = dbTimestamp != null ? dbTimestamp.toLocalDateTime() : null;
+				
+				transaction.add(new Transaction(id, amount, description, timestamp));
 				balance += amount;
 				}
 				System.out.println("Loaded " + transaction.size() + " past transactions.");
 			} catch(SQLException e) {
-			System.err.println("Database connection failed: " + e.getMessage());
+			System.err.println("Database connection failed during loading: " + e.getMessage());
 		}
 	}
 	
